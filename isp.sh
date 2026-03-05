@@ -1,27 +1,28 @@
 #!/bin/bash
-# Скрипт настройки ISP для демо-экзамена
+# Скрипт настройки ISP для демо-экзамена (фиксированные имена eth0/eth1/eth2)
 # Должен выполняться от root
 
 set -e  # прерывать при ошибке
 
-# Определение интерфейсов (кроме loopback)
-interfaces=($(ls /sys/class/net | grep -v lo | sort))
-if [ ${#interfaces[@]} -lt 3 ]; then
-    echo "Ошибка: обнаружено менее 3 сетевых интерфейсов (${#interfaces[@]})"
-    exit 1
-fi
+# Фиксированные имена интерфейсов
+wan_iface="eth0"
+lan1_iface="eth1"
+lan2_iface="eth2"
 
-wan_iface=${interfaces[0]}
-lan1_iface=${interfaces[1]}
-lan2_iface=${interfaces[2]}
-
-echo "Обнаруженные интерфейсы: ${interfaces[@]}"
-echo "Будут использованы:"
+echo "Будут настроены интерфейсы:"
 echo "  WAN (интернет, DHCP): $wan_iface"
 echo "  LAN1 (HQ, 172.16.4.1/28): $lan1_iface"
 echo "  LAN2 (BR, 172.16.5.1/28): $lan2_iface"
 echo "Проверьте правильность. Прервите скрипт (Ctrl+C), если неверно."
 sleep 5
+
+# Проверка наличия интерфейсов в системе (необязательно, но для информации)
+for iface in $wan_iface $lan1_iface $lan2_iface; do
+    if [ ! -d "/sys/class/net/$iface" ]; then
+        echo "Предупреждение: интерфейс $iface не найден в системе."
+        echo "Он будет создан после перезапуска сети."
+    fi
+done
 
 # 1. Установка имени хоста
 hostnamectl set-hostname isp
@@ -84,8 +85,8 @@ systemctl restart networking || {
 
 # Проверка
 echo "Проверка назначенных IP-адресов:"
-ip -4 addr show $lan1_iface | grep -o "172.16.4.1/28" && echo "LAN1 OK" || echo "Ошибка на LAN1"
-ip -4 addr show $lan2_iface | grep -o "172.16.5.1/28" && echo "LAN2 OK" || echo "Ошибка на LAN2"
-ip -4 addr show $wan_iface | grep -o "inet [0-9.]*" && echo "WAN получил IP" || echo "WAN не получил IP (возможно, нет DHCP-сервера)"
+ip -4 addr show $lan1_iface 2>/dev/null | grep -q "172.16.4.1/28" && echo "LAN1 OK" || echo "Ошибка на LAN1 (возможно, интерфейс не поднят)"
+ip -4 addr show $lan2_iface 2>/dev/null | grep -q "172.16.5.1/28" && echo "LAN2 OK" || echo "Ошибка на LAN2"
+ip -4 addr show $wan_iface 2>/dev/null | grep -q "inet " && echo "WAN получил IP" || echo "WAN не получил IP (возможно, нет DHCP-сервера)"
 
 echo "Настройка ISP завершена."
