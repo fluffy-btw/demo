@@ -1,66 +1,72 @@
 #!/bin/bash
-# Скрипт для автоматической настройки Samba DC на сервере BR-SRV
-# Основан на инструкциях из samba.txt
+# Скрипт для настройки Samba DC на BR-SRV (исправленная версия)
+set -e
 
-set -e  # Прерывать выполнение при ошибке
-
-# Проверка прав root
 if [[ $EUID -ne 0 ]]; then
-   echo "Этот скрипт должен выполняться от root (sudo)." 
-   exit 1
+    echo "Запустите скрипт от root (sudo)."
+    exit 1
 fi
 
-# Параметры домена
+# Конфигурационные параметры
 REALM="au-team.irpo"
 DOMAIN="au-team"
 ADMIN_PASS="P@ssw0rd"
 DNS_FORWARDER="192.168.100.2"
-DNS_SERVERS=("127.0.0.1" "192.168.100.2" "8.8.8.8")
+DNS_SERVERS=("127.0.0.1" "192.168.100.2" "10.2.0.3")
 
+# 1. Настройка resolv.conf
 echo "=== Настройка DNS (resolv.conf) ==="
-# Резервная копия текущего resolv.conf
 cp /etc/resolv.conf /etc/resolv.conf.bak
-# Запись новых настроек
 cat > /etc/resolv.conf <<EOF
 nameserver ${DNS_SERVERS[0]}
 nameserver ${DNS_SERVERS[1]}
 nameserver ${DNS_SERVERS[2]}
 EOF
-echo "resolv.conf обновлён."
 
-echo "=== Обновление пакетов и установка Samba DC ==="
+# 2. Установка пакетов
+echo "=== Установка Samba DC и утилит ==="
 apt-get update
 apt-get install -y task-samba-dc bind-utils
 
+# 3. Очистка старых конфигураций
 echo "=== Очистка старых конфигураций Samba ==="
 rm -rf /etc/samba/smb.conf
 rm -rf /var/lib/samba
 rm -rf /var/cache/samba
 mkdir -p /var/lib/samba/sysvol
 
+# 4. Provision домена (без --dns-forwarder, используем --option)
 echo "=== Provision домена ==="
 samba-tool domain provision \
     --realm="${REALM}" \
     --domain="${DOMAIN}" \
     --server-role=dc \
     --dns-backend=SAMBA_INTERNAL \
-    --dns-forwarder="${DNS_FORWARDER}" \
     --adminpass="${ADMIN_PASS}" \
     --use-rfc2307 \
-    --option="interfaces=lo enp0s3" \
-    --option="bind interfaces only=yes"
+    --option="interfaces=lo eth0" \
+    --option="bind interfaces only=yes" \
+    --option="dns forwarder = ${DNS_FORWARDER}"
 
+# 5. Копирование krb5.conf
 echo "=== Копирование Kerberos конфигурации ==="
 cp -f /var/lib/samba/private/krb5.conf /etc/krb5.conf
 
-echo "=== Запуск и включение службы Samba ==="
-# В Debian после установки task-samba-dc служба называется samba-ad-dc
-systemctl enable --now samba-ad-dc || systemctl enable --now samba
+# 6. Запуск службы
+echo "=== Запуск и включение Samba ==="
+# В зависимости от дистрибутива служба может называться samba-ad-dc или samba
+if systemctl list-unit-files | grep -q samba-ad-dc; then
+    systemctl enable --now samba-ad-dc
+else
+    systemctl enable --now samba
+fi
 
+# 7. Проверка DNS
 echo "=== Проверка DNS (ping ya.ru) ==="
-ping -c 3 ya.ru && echo "DNS работает." || echo "Внимание: ping не удался, проверьте сеть."
+ping -c 3 ya.ru && echo "DNS работает." || echo "Внимание: ping не удался, проверьте настройки."
 
-echo "=== Создание пользователей и группы ==="
+# 8. Создание пользователей и группы
+echo "=== Создание пользователей и группы hq ==="
 for i in {1..5}; do
     samba-tool user add "user${i}.hq" "${ADMIN_PASS}"
 done
@@ -71,5 +77,5 @@ for i in {1..5}; do
 done
 
 echo "=== Настройка завершена ==="
-echo "Контроллер домена ${DOMAIN}.${REALM} успешно развёрнут."
-echo "Пользователи и группа созданы."
+echo "Контроллер домена ${DOMAIN}.${REALM} развёрнут."
+echo "Пользователи и группа hq созданы."
