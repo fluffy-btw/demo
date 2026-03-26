@@ -12,7 +12,7 @@ REALM="au-team.irpo"
 DOMAIN="au-team"
 ADMIN_PASS="P@ssw0rd"
 DNS_FORWARDER="192.168.100.2"
-DNS_SERVERS=("127.0.0.1" "192.168.100.2" "8.8.8.8")
+DNS_SERVERS=("192.168.100.2" "127.0.0.1" "8.8.8.8")
 
 # 1. Настройка resolv.conf
 echo "=== Настройка DNS (resolv.conf) ==="
