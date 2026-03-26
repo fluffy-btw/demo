@@ -12,7 +12,7 @@ REALM="au-team.irpo"
 DOMAIN="au-team"
 ADMIN_PASS="P@ssw0rd"
 DNS_FORWARDER="192.168.100.2"
-DNS_SERVERS=("127.0.0.1" "192.168.100.2" "10.2.0.3")
+DNS_SERVERS=("127.0.0.1" "192.168.100.2" "8.8.8.8")
 
 # 1. Настройка resolv.conf
 echo "=== Настройка DNS (resolv.conf) ==="
@@ -44,7 +44,7 @@ samba-tool domain provision \
     --dns-backend=SAMBA_INTERNAL \
     --adminpass="${ADMIN_PASS}" \
     --use-rfc2307 \
-    --option="interfaces=lo eth0" \
+    --option="interfaces=lo enp0s3" \
     --option="bind interfaces only=yes" \
     --option="dns forwarder = ${DNS_FORWARDER}"
 
