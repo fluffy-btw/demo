@@ -130,21 +130,19 @@ EOF
         # 3. Вывод команд для проверки
         echo "=== Инструкция по проверке ==="
         echo "1. Присоединитесь к домену au-team.irpo:"
-        echo "   - Запустите 'admc' или используйте 'realm join --user=Administrator au-team.irpo'"
+        echo "   - Запустите 'acc'> Аутентификация"
         echo "   - Пароль администратора: P@ssw0rd"
         echo "   - После присоединения перезагрузите компьютер."
         echo
         echo "2. Проверьте права sudo для пользователей из группы hq:"
+        echo "   - Войдите под administrator (P@ssw0rd)"
+        echo "   - sudo -i (пароль - P@ssw0rd)"
+        echo "   - control sudo public"
         echo "   - Войдите под user1.hq (пароль P@ssw0rd)."
         echo "   - Выполните: sudo id           (должно работать)"
-        echo "   - Выполните: sudo grep test    (должно работать)"
+        echo "   - Выполните: sudo grep    (должно работать)"
         echo "   - Выполните: sudo cat /etc/resolv.conf  (должно работать)"
-        echo "   - Выполните: sudo more /etc/resolv.conf (должна быть ошибка 'Sorry, user is not allowed')"
-        echo
-        echo "3. Проверьте права администратора:"
-        echo "   - Войдите под administrator (пароль P@ssw0rd)."
-        echo "   - Выполните: sudo -i"
-        echo "   - После этого можно управлять системой."
+        echo "   - Выполните: sudo more (должна быть ошибка 'Sorry, user is not allowed')"
 
         echo "=== Настройка HQ-CLI завершена ==="
         ;;
